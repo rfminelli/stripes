@@ -1,0 +1,170 @@
+.\"
+.\" lg.man,v 1.2 2001/05/29 17:33:08 kim Exp
+.\"
+.\" Copyright (c) 2001 Global Wire Oy.
+.\" All rights reserved.
+.\"
+.\" This code is derived from software contributed to Global Wire Oy
+.\" by Kimmo Suominen.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright notice,
+.\"    this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. Neither the name of Global Wire Oy nor the names of its contributors
+.\"    may be used to endorse or promote products derived from this software
+.\"    without specific prior written permission.
+.\"
+.\" THIS SOFTWARE IS PROVIDED BY GLOBAL WIRE OY AND CONTRIBUTORS ``AS IS''
+.\" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+.\" THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+.\" PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL GLOBAL WIRE OY OR CONTRIBUTORS
+.\" BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+.\" CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+.\" SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+.\" INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+.\" CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+.\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+.\" THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+.TH LG 8 "@PDATE@" "Stripes @PVERS@"
+.SH NAME
+.B lg
+- Looking Glass for Zebra and Cisco Routers
+.SH SYNOPSIS
+.B lg
+.br
+.B env
+.BI QUERY_STRING=' \fIoptions\fR '
+.B lg
+.SH DESCRIPTION
+.B Lg
+is a CGI script for viewing the results of simple queries executed
+on remote Zebra or Cisco routers.  The queries and routers can be
+listed in a configuration file.
+.PP
+Available routers are listed in the
+.B %ROUTERS
+table.  The keys are used for display, so actual router names (and
+possible passwords) need not be exposed.  The router names or IP
+addresses together with optional authentication and port information
+are stored as values.  The syntax for a router entry is
+.PP
+.RS
+.RI [[ user :] pass @] router [: port ]
+.RE
+.PP
+The fields are
+.PP
+.IP user
+The username for logging in to a router that has been configured
+with multiple users.  A password must also be provided.
+.IP pass
+The password for logging in to a router (with or without a username).
+.IP router
+The router name or IP address.
+.IP port
+The port to connect to.  The default is 23 (telnet), for use with
+Cisco routers.  Enter 2605 for Zebra routers (bgpd).
+.PP
+The default router is listed in the
+.B $DEFROUTER
+variable.
+.PP
+Available queries are listed in the
+.B %QUERIES
+table.  The keys are used for display and the values are the commands
+sent to the router.  Fields from the query form can be referenced using
+escapes in the command string.  The escapes are
+.IP %a
+The address text, checked as an IP address of the selected protocol.
+.IP %p
+The selected protocol, retrieved from \fB%PROTOCOLS\fR.
+.IP %q
+The query field, checked against keys in \fB%QUERIES\fR.
+.IP %r
+The address text, checked as an AS regular expression.
+.PP
+The expanded query is displayed on the results page.  The default
+query is listed in the
+.B $DEFQUERY
+variable.
+.PP
+Available protocols are listed in the
+.B %PROTOCOLS
+table.  There should normally be no need to alter this table.  The
+default protocol is listed in the
+.B $DEFPROTOCOL
+variable.
+.SH FILES
+@PCONF@
+.SH EXAMPLES
+.na
+.nf
+#
+# Set these appropriately:
+#
+
+$ORGNAME = 'Global Wire';
+$ORGADDR = 'noc@gw.net';
+
+%ROUTERS = (
+    'Lappeenranta' => 'zebra1.gw.net:2605',
+    'Manhattan 1'  => 'user:pass@cisco1.gw.net',
+    'Manhattan 2'  => 'pass@cisco2.gw.net',
+    'Stamford'     => 'pass@zebra2.gw.net:2605',
+    'Toledo'       => 'cisco3.gw.net',
+);
+$DEFROUTER = 'Lappeenranta';
+
+%QUERIES = (
+    'bgp'          => 'show %p %q %a',
+    'bgp regexp'   => 'show %p %q %r',
+    'bgp summary'  => 'show %p %q',
+    'who'          => '%q',
+);
+$DEFQUERY = 'bgp summary';
+
+# Always return true:
+1;
+.fi
+.ad
+.SH SEE ALSO
+.BR bgpd (8)
+.SH DIAGNOSTICS
+If the query parameters do not match the configured options in the
+script, the query will not be sent to the router, and the script
+will return messages suggesting redoing the query from the form.
+.PP
+If the query is allowed by the current configuration, it will be
+displayed on the result page together with the response from the
+router.
+.PP
+Any problems in connecting to the router will be reported on the
+result page as well.
+.\" .SH BUGS
+.\" No known bugs.
+.SH AUTHOR
+Kimmo Suominen <kim@tac.nyc.ny.us>
+.br
+Copyright (c) 2001 Global Wire Oy
+.br
+http://www.gw.com/sw/stripes/
+.SH SECURITY CONSIDERATIONS
+Be careful with queries like
+.BR who ,
+which can reveal sensitive information such as usernames.
+.PP
+Any queries that would require connecting to the router in
+.B enable
+mode are probably not suitable for exposing via a Looking Glass.
+.PP
+To avoid storing usernames and/or passwords in files, consider
+configuring the vty interface with
+.B no login
+together with a very restrictive
+.BR access-class .
